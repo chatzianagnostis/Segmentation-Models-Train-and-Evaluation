@@ -15,7 +15,7 @@ from dataset import create_dataset
 from utils import load_config
 from architecture import CustomSegmentationModel
 
-import pdb
+
 def main(config_file):
     # Read from config.yaml====================================================================
     config_project = load_config(args.config_project)
@@ -39,7 +39,6 @@ def main(config_file):
 
     MODEL = config_model['ARCHITECTURE']
     KWARGS = config_model['HYP']
-    pdb.set_trace()
 
     # Create folder for train resuts =========================================================
     OUTPUT_FOLDER = os.path.join(DIR, 'runs','train', EXP_NAME)

@@ -13,30 +13,33 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 from dataset import create_dataset
 from utils import load_config
+from architecture import CustomSegmentationModel
 
-
+import pdb
 def main(config_file):
     # Read from config.yaml====================================================================
-    config = load_config(config_file)
+    config_project = load_config(args.config_project)
+    config_model= load_config(args.config_model)
+
     # Directory paths:
-    DIR = config["DIR"]
-    DATASET_PATH = config["DATASET_PATH"]
+    DIR = config_project["DIR"]
+    DATASET_PATH = config_project["DATASET_PATH"]
     TRAIN_PATH = os.path.join(DATASET_PATH, 'train')
     VALID_PATH = os.path.join(DATASET_PATH, 'valid')
-    IMAGE_EXTENSION = config["IMAGE_EXTENSION"]
-    MAKS_EXTENSION = config["MAKS_EXTENSION"]
+    IMAGE_EXTENSION = config_project["IMAGE_EXTENSION"]
+    MAKS_EXTENSION = config_project["MAKS_EXTENSION"]
     EXTENSIONS = [IMAGE_EXTENSION, MAKS_EXTENSION]
     # Model hyperparameters:
-    MULTICLASS_MODE = config["MODEL"]["MULTICLASS_MODE"]
-    EXP_NAME = config["MODEL"]["EXP_NAME"]
-    ENCODER = config["MODEL"]["ENCODER"]
-    ENCODER_WEIGHTS = config["MODEL"]["ENCODER_WEIGHTS"]
-    CLASSES = config["MODEL"]["CLASSES"]
-    ACTIVATION = config["MODEL"]["ACTIVATION"]
-    BATCH_SIZE = config["MODEL"]["BATCH_SIZE"]
-    LEARNING_RATE = config["MODEL"]["LEARNING_RATE"]
-    EPOCHS = config["MODEL"]["EPOCHS"]
-    CHANNELS = config["MODEL"]["CHANNELS"]
+    MULTICLASS_MODE = config_project["MODEL"]["MULTICLASS_MODE"]
+    EXP_NAME = config_project["MODEL"]["EXP_NAME"]
+    CLASSES = config_project["MODEL"]["CLASSES"]
+    BATCH_SIZE = config_project["MODEL"]["BATCH_SIZE"]
+    LEARNING_RATE = config_project["MODEL"]["LEARNING_RATE"]
+    EPOCHS = config_project["MODEL"]["EPOCHS"]
+
+    MODEL = config_model['ARCHITECTURE']
+    KWARGS = config_model['HYP']
+    pdb.set_trace()
 
     # Create folder for train resuts =========================================================
     OUTPUT_FOLDER = os.path.join(DIR, 'runs','train', EXP_NAME)
@@ -90,17 +93,13 @@ def main(config_file):
     DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(torch.cuda.get_device_properties(0))
 
-    model = smp.UnetPlusPlus(
-        encoder_name=ENCODER, 
-        encoder_weights=ENCODER_WEIGHTS, 
-        in_channels=CHANNELS,
-        classes=len(CLASSES),
-        activation=ACTIVATION,
-    ).to(DEVICE)
+    segmentation_model = CustomSegmentationModel(MODEL, **KWARGS)
+    model = segmentation_model.build_model()
+    model.to(DEVICE)
 
     torch.save(model, f'{SAVE_MODEL_PATH}/init_model.pth')
 
-    summary(model, input_size=(3, 1376, 800), device=DEVICE.type)
+    #summary(model, input_size=(3, 1376, 800), device=DEVICE.type)
     print(f'Dataset stats:\n Training Set: {len(train_dataset)} images\n Validation Set: {len(valid_dataset)} images')
 
     # Define Loss and Metrics to Monitor =====================================================
@@ -157,6 +156,8 @@ def main(config_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Unet++ with custom dataset")
-    parser.add_argument("--config", dest="config_file", default="config.yaml", help="Path to YAML config file")
+    parser.add_argument("--config", dest="config_project", default="config.yaml", help="Path to YAML config file")
+    parser.add_argument("--model", dest="config_model", default="models/unetplusplus.hyp.yaml", help="Path to YAML config model file")
+
     args = parser.parse_args()
-    main(args.config_file)
+    main(args)
